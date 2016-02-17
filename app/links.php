@@ -20,41 +20,58 @@ function get_unique_article_links($url=null)
 	return $outside_links;
 }
 
+
 function get_base_urls($links)
 {
 	$base_urls = [];
 	foreach ($links as $link){
 		$base_url = get_base_url($link);
-		if (in_array($base_url, $base_urls)) {
+		if (in_array($base_url, array_keys($base_urls))) {
 			continue;
 		}
-		$base_urls[] = $base_url;
+		$base_urls[$base_url] = [$base_url, $link];
 	}
 	return $base_urls;
 }
+
 
 function check_rss_page_exists($links)
 {
 	$all_headers = [];
 	$bad_urls = [];
-	foreach ($links as $base_url){
-		$url = $base_url . '/rss';
-		$header = get_headers($url, 1);
-		$segms = explode(' ', $header[0]);
-		if ($segms[1] >= 400) {
-			$bad_urls[] = $base_url;
+	foreach ($links as $uinfo){
+		$state = check_if_valid_feed($uinfo);
+		if ($state === false) {
+			$bad_urls[] = $uinfo;
 			continue;
 		}
-		$header['feed_url'] = $url;
-		$all_headers[$base_url] = $header;
+		$all_headers[$uinfo[0]] = $state;
 	}
-	foreach ($bad_urls as $base_url){
-		$url = $base_url . '/feed';
-		$header = get_headers($url, 1);
-		$header['feed_url'] = $url;
-		$all_headers[$base_url] = $header;
+	$stage_two_bad_urls = [];
+	foreach ($bad_urls as $uinfo){
+		$state = check_if_valid_feed($uinfo);
+		if ($state === false) {
+			$stage_two_bad_urls[] = $uinfo;
+			continue;
+		}
+		$all_headers[$uinfo[0]] = $state;
 	}
-	return $all_headers;
+	return [$all_headers, $stage_two_bad_urls];
+}
+
+
+function check_if_valid_feed($uinfo, $end='/rss')
+{
+	$base_url = $uinfo[0];
+	$url = $base_url . $end;
+	$header = get_site_headers($url);
+	$segms = explode(' ', $header[0]);
+	if ($segms[1] >= 400) {
+		return false;
+	}
+	$header['feed_url'] = $url;
+	$header['source_url'] = $uinfo[1];
+	return $header;
 }
 
 
@@ -62,32 +79,90 @@ function check_status_code($sites_headers)
 {
 	$links_status = [];
 	foreach ($sites_headers as $url=>$headers){
-		$segms = explode(' ', $headers[0]);
-		$cat = 'found';
-		if ($segms[1] >= 400) {
-			$feed_url = $headers['feed_url'];
-			$content_type = null;
-			$cat = 400;
-		} elseif ($segms[1] >= 300) {
-			$feed_url = $headers['Location'];
-			$content_type = $headers['Content-Type'];
-		} else {
-			$feed_url = $headers['feed_url'];
-			$content_type = $headers['Content-Type'];
-		}
-		$links_status[$cat][$url] = [$feed_url, $content_type];
+		println("saving: $url");
+		$links_status[$url] = get_status_code($url, $headers);
 	}
 	return $links_status;
 }
 
 
-function download_link($link)
+function get_status_code($url, $headers)
 {
-	$md5 = md5($link);
-	$path = "cache/$md5";
-	if (!file_exists($path)) {
-		$content = download($link);
-		file_put_contents("cache/$md5", $content);
+	$segms = explode(' ', $headers[0]);
+	if ($segms[1] >= 300) {
+		$feed_url = $headers['Location'];
+		$source_url = $headers['source_url'];
+		$content_type = $headers['Content-Type'][1];
+	} else {
+		$feed_url = $headers['feed_url'];
+		$source_url = $headers['source_url'];
+		$content_type = $headers['Content-Type'];
 	}
-	return $path;
+	return [$feed_url, $content_type, $source_url];
 }
+
+
+function save_feeds($fp, $sites_headers, $url)
+{
+	foreach ($sites_headers as $base_url=>$found){
+		save_feed($base_url, $found, $url, $fp);
+	}
+}
+
+
+function save_feed($base_url, $found, $url, $fp )
+{
+	list($feed_url, $content_type, $article) = $found;
+	if (strstr($content_type, 'xml') !== false) {
+		fputcsv($fp, [$feed_url, $base_url, $url, $article]);
+	} else {
+		$feeds = search_valid_feed($base_url, $feed_url);
+		if (count($feeds) == 0) {
+			fputcsv($fp, ['Not found', $base_url, $url, $article]);
+		} else {
+			foreach ($feeds as $feed){
+				fputcsv($fp, [$feed, $base_url, $url, $article]);
+			}
+		}
+	}
+}
+
+
+function search_valid_feed($base_url, $url)
+{
+	$saved_to = download_link($url);
+	$content = file_get_contents($saved_to);
+	$xpath = get_xpath($content);
+	$links = $xpath->query('//a');
+	$headers = [];
+	$feeds = [];
+	$checked = [];
+	foreach ($links as $link){
+		$url = $link->getAttribute('href');
+		if (trim($url) == '' || trim($url) == '/') {
+			continue;
+		}
+		if (in_array($url, $checked)) {
+			continue;
+		}
+		$checked[] = $url;
+		printf("%s\n", $url);
+		if (strpos($url, '/') == 0) {
+			$url = $base_url .  $url;
+		}
+		$header = get_site_headers($url);
+		if (!array_key_exists('Content-Type', $header)) {
+			continue;
+		}
+		if(is_array($header['Content-Type'])) {
+			$ctype = $header['Content-Type'][1];
+		} else {
+			$ctype = $header['Content-Type'];
+		}
+		if (strstr($ctype, 'xml') !== false) {
+			$feeds[] = $url;
+		}
+	}
+	return $feeds;
+}
+

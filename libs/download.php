@@ -16,3 +16,27 @@ function download($url)
 	curl_close($ch);
 	return str_replace(array('<br>', '<br/>', '<br />'), "\n", $response);
 }
+
+function download_link($link)
+{
+	$md5 = md5($link);
+	$path = "cache/$md5";
+	if (!file_exists($path)) {
+		$content = download($link);
+		file_put_contents("cache/$md5", $content);
+	}
+	return $path;
+}
+
+function get_site_headers($url)
+{
+	$path = 'cache/headers/' . md5($url);
+	if (file_exists($path)) {
+		$header = json_decode_file($path);
+	} else {
+		$header = get_headers($url, 1);
+		json_encode_to_file($path, $header);
+	}
+	return $header;
+}
+
