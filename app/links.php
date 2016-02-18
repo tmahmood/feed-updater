@@ -63,7 +63,8 @@ function check_rss_page_exists($links)
 function check_if_valid_feed($uinfo, $end='/rss')
 {
 	$base_url = $uinfo[0];
-	$url = $base_url . $end;
+	$url = $base_url . '/' . $end;
+	str_replace('//', '/', $url);
 	$header = get_site_headers($url);
 	$segms = explode(' ', $header[0]);
 	if ($segms[1] >= 400) {
@@ -79,7 +80,6 @@ function check_status_code($sites_headers)
 {
 	$links_status = [];
 	foreach ($sites_headers as $url=>$headers){
-		println("saving: $url");
 		$links_status[$url] = get_status_code($url, $headers);
 	}
 	return $links_status;
@@ -88,6 +88,7 @@ function check_status_code($sites_headers)
 
 function get_status_code($url, $headers)
 {
+	print_r ($url);
 	$segms = explode(' ', $headers[0]);
 	if ($segms[1] >= 300) {
 		$feed_url = $headers['Location'];
@@ -130,8 +131,21 @@ function save_feed($base_url, $found, $url, $fp )
 
 function search_valid_feed($base_url, $url)
 {
-	$saved_to = download_link($url);
-	$content = file_get_contents($saved_to);
+	if (is_array($url)) {
+		print_r ($url);
+	}
+	if (trim($url) == '' || trim($url) == '/') {
+		return [];
+	}
+	while(true) {
+		$saved_to = download_link($url);
+		$content = file_get_contents($saved_to);
+		if ($content == '') {
+			unlink($saved_to);
+			continue;
+		}
+		break;
+	}
 	$xpath = get_xpath($content);
 	$links = $xpath->query('//a');
 	$headers = [];
@@ -146,7 +160,6 @@ function search_valid_feed($base_url, $url)
 			continue;
 		}
 		$checked[] = $url;
-		printf("%s\n", $url);
 		if (strpos($url, '/') == 0) {
 			$url = $base_url .  $url;
 		}

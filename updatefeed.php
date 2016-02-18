@@ -1,13 +1,10 @@
 <?php
 
-include ('libs/download.php');
-include ('libs/dom.php');
-include ('libs/helpers.php');
-include ('app/links.php');
+include ('bootstrap.php');
 
 
-$url = 'https://flipboard.com/topic/3dmodeling';
-$outside_links = get_unique_article_links();
+$url = 'https://flipboard.com/topic/personalfinance';
+$outside_links = get_unique_article_links($url);
 $base_urls = get_base_urls($outside_links);
 list($good_headers, $bad_urls) = check_rss_page_exists($base_urls);
 $sites_headers = check_status_code($good_headers);
@@ -22,6 +19,8 @@ foreach ($bad_urls as $found){
 		foreach ($feeds as $feed){
 			save_feed($base_url, [$feed, 'xml', $article], $url, $fp);
 		}
+	} else {
+		save_feed($base_url, ['', '', $article], $url, $fp);
 	}
 }
 fclose($fp);
