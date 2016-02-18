@@ -10,6 +10,67 @@ const COOKIE_PATH = 'cookie.jar';
  */
 class Url
 {
+	function __construct($url)
+	{
+		$this->url = $url;
+	}
+
+	function fetch_headers()
+	{
+		$headers = Url::get_site_headers($this->url);
+		$this->headers = $headers;
+		$segms = explode(' ', $headers[0]);
+		if (count($segms) < 2) {
+			print_r ($segms);
+			printf("%s", $this->url);
+			return 404;
+		}
+		$this->status_code = $segms[1];
+		if ($this->status_code >= 400) {
+			return $this->status_code;
+		}
+		if ($this->status_code < 300) {
+			$this->redirected = false;
+			$ctype = array_key_exists('Content-Type', $headers) ? 'Content-Type' : 'content-type';
+			$this->content_type = $headers[$ctype];
+		} else {
+			$this->redirected = true;
+			if (array_key_exists('Location', $headers)) {
+				$this->location = $headers['Location'];
+			} else {
+				$this->location = $headers['location'];
+			}
+			$ctype = array_key_exists('Content-Type', $headers) ? 'Content-Type' : 'content-type';
+			$this->content_type = $headers[$ctype][1];
+		}
+		$this->is_xml_content = strstr($this->content_type, 'xml') !== false;
+		return $this->status_code;
+	}
+
+
+	// {{{ static functions
+
+	public static function get_unique_article_links($url)
+	{
+		if ($url != null) {
+			$content = Url::download($url);
+			file_put_contents('page.htm', $content);
+		}
+		$content = file_get_contents('page.htm');
+		$xpath = get_xpath($content);
+		$links = $xpath->query('//a');
+		$outside_links = [];
+		foreach ($links as $link){
+			$target_url = $link->getAttribute('href');
+			if (strpos($target_url, '/') == 0) {
+				continue;
+			}
+			$outside_links[] = $target_url;
+		}
+		return $outside_links;
+	}
+
+
 	public static function download($url)
 	{
 		$ch = curl_init();
@@ -40,10 +101,12 @@ class Url
 		$path = 'cache/headers/' . md5($url);
 		if (file_exists($path)) {
 			$header = JSON::json_decode_file($path);
-		} else {
-			$header = get_headers($url, 1);
-			JSON::json_encode_to_file($path, $header);
+			if ($header != false) {
+				return $header;
+			}
 		}
+		$header = get_headers($url, 1);
+		JSON::json_encode_to_file($path, $header);
 		return $header;
 	}
 
@@ -53,6 +116,15 @@ class Url
 		return $urldetails['scheme'] . '://' . $urldetails['host'];
 	}
 
+	public static function fix($url, $base_url)
+	{
+		$uobj = parse_url($url);
+		if (array_key_exists('scheme', $uobj)) {
+			return $url;
+		}
+		return $base_url . '/' . trim($url, '/');
+	}
+	// }}}
 }
 
 

@@ -19,16 +19,6 @@ class SiteTest extends PHPUnit_Framework_TestCase
 		$site = new Site($test_url);
 		$state = $site->check_if_valid_feed('rss');
 		$this->assertTrue($state);
-		$this->assertTrue($site->found);
-	}
-
-	public function testMovedRSS()
-	{
-		$test_url = 'http://www.telegraph.co.uk/finance/personalfinance/investing/shares/12160028/Sell-off-has-barely-begun-says-1.2bn-investor.html';
-		$site = new Site($test_url);
-		$state = $site->check_if_valid_feed('feed');
-		$this->assertTrue($site->redirected);
-		$this->assertTrue($site->found);
 	}
 
 	public function testBadRSS()
@@ -37,7 +27,14 @@ class SiteTest extends PHPUnit_Framework_TestCase
 		$site = new Site($test_url);
 		$state = $site->check_if_valid_feed('rss');
 		$this->assertFalse($state);
-		$this->assertFalse($site->found);
 	}
 
+
+	function testGetFeeds()
+	{
+		$base_url = 'https://www.washingtonpost.com/';
+		$site = new Site($base_url);
+		$cnt = $site->search_valid_feed();
+		$this->assertEquals(67, $cnt);
+	}
 }

@@ -10,47 +10,59 @@ class Site
 	{
 		$this->article_url = $url;
 		$this->base_url = Url::get_base_url($url);
-		$this->found = null;
-		$this->content_type = null;
-		$this->feed_url = null;
-		$this->is_xml_content = null;
-		$this->redirected = null;
-		$this->header = null;
-	}
-
-	function check_if_valid_feed($end)
-	{
-		$url = $this->base_url . '/' . $end;
-		str_replace('//', '/', $url);
-		$header = Url::get_site_headers($url);
-		$segms = explode(' ', $header[0]);
-		if ($segms[1] >= 400) {
-			return false;
-		}
-		$this->found = true;
-		$this->header = $header;
-		if ($segms[1] >= 300) {
-			$this->feed_url = $header['Location'];
-			$this->redirected = true;
-			$this->content_type = $this->header['Content-Type'][1];
-			$this->is_xml_content = strstr($this->content_type, 'xml') !== false;
-		} else {
-			$this->feed_url = $url;
-			$this->content_type = $this->header['Content-Type'];
-			$this->is_xml_content = strstr($this->content_type, 'xml') !== false;
-		}
-		return true;
-	}
-
-	function get_row()
-	{
-		return [ $this->feed_url, $this->base_url, $null, $this->article_url ];
+		$this->url_info = null;
 	}
 
 	function search_valid_feed()
 	{
+		if($this->check_if_valid_feed('rss')) {
+			return true;
+		}
+		if($this->check_if_valid_feed('feed')) {
+			return true;
+		}
+		$this->feeds = $this->search_links($this->base_url);
+		return count($this->feeds) > 0;
+	}
+
+
+	function check_if_valid_feed($end)
+	{
+		$url = $this->base_url . '/' . trim($end, '/');
+		$url_info = new Url($url);
+		if ($url_info->fetch_headers() >= 400) {
+			return false;
+		}
+		if($url_info->is_xml_content) {
+			$this->url_info = $url_info;
+			$this->feeds[] = $url;
+			return true;
+		}
+		$feeds = $this->search_links($url_info->url);
+		if (count($feeds) > 0) {
+			$this->feeds = $feeds;
+			return true;
+		}
+		return false;
+	}
+
+	function write_row($fp, $url)
+	{
+		$nfeeds = count($this->feeds);
+		printf("writing %s link(s)\n", $nfeeds);
+		if ($nfeeds == 0) {
+			fputcsv($fp, ['', $this->base_url, $url, $this->article_url]);
+			return;
+		}
+		foreach ($this->feeds as $feed){
+			fputcsv($fp, [$feed, $this->base_url, $url, $this->article_url]);
+		}
+	}
+
+	function search_links($url)
+	{
 		while(true) {
-			$saved_to = download_link($this->feed_url);
+			$saved_to = Url::download_link($url);
 			$content = file_get_contents($saved_to);
 			if ($content == '') {
 				unlink($saved_to);
@@ -65,30 +77,42 @@ class Site
 		$checked = [];
 		foreach ($links as $link){
 			$url = $link->getAttribute('href');
-			if (trim($url) == '' || trim($url) == '/') {
-				continue;
-			}
-			if (in_array($url, $checked)) {
+			if($this->should_skip($url, $checked)) {
 				continue;
 			}
 			$checked[] = $url;
-			if (strpos($url, '/') == 0) {
-				$url = $base_url .  $url;
-			}
-			$header = get_site_headers($url);
-			if (!array_key_exists('Content-Type', $header)) {
+			$url = Url::fix($url, $this->base_url);
+			$url_info = new Url($url);
+			if($url_info->fetch_headers() >= 400) {
 				continue;
 			}
-			if(is_array($header['Content-Type'])) {
-				$ctype = $header['Content-Type'][1];
-			} else {
-				$ctype = $header['Content-Type'];
-			}
-			if (strstr($ctype, 'xml') !== false) {
+			if ($url_info->is_xml_content) {
 				$feeds[] = $url;
 			}
+			if (count($checked) % 30 == 0) {
+				printf("#", count($checked));
+			}
 		}
-		$this->feed_url = $feeds;
-		return count($feeds);
+		print("\n");
+		return $feeds;
+	}
+
+
+	function should_skip($url, $checked)
+	{
+		if (strstr($url, 'javascript:') !== false) {
+			return true;
+		}
+		if (strstr($url, 'mailto:') !== false) {
+			return true;
+		}
+		if (trim($url) == '' || trim($url) == '/') {
+			return true;
+		}
+		if (in_array($url, $checked)) {
+			return true;
+		}
+		return false;
 	}
 }
+
