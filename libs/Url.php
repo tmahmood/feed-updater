@@ -29,9 +29,15 @@ class Url
 		if ($this->status_code >= 400) {
 			return $this->status_code;
 		}
+		if (!array_key_exists('Content-Type', $headers) ||
+				!array_key_exists('content-type', $headers)) {
+			if ($this->status_code == 204) {
+				return $this->status_code;
+			}
+		}
+		$ctype = array_key_exists('Content-Type', $headers) ? 'Content-Type' : 'content-type';
 		if ($this->status_code < 300) {
 			$this->redirected = false;
-			$ctype = array_key_exists('Content-Type', $headers) ? 'Content-Type' : 'content-type';
 			$this->content_type = $headers[$ctype];
 		} else {
 			$this->redirected = true;
@@ -40,7 +46,6 @@ class Url
 			} else {
 				$this->location = $headers['location'];
 			}
-			$ctype = array_key_exists('Content-Type', $headers) ? 'Content-Type' : 'content-type';
 			$this->content_type = $headers[$ctype][1];
 		}
 		$this->is_xml_content = strstr($this->content_type, 'xml') !== false;
@@ -105,7 +110,10 @@ class Url
 				return $header;
 			}
 		}
-		$header = get_headers($url, 1);
+		$header = @get_headers($url, 1);
+		if (count($header) < 2) {
+			print_r($url);
+		}
 		JSON::json_encode_to_file($path, $header);
 		return $header;
 	}
@@ -119,6 +127,10 @@ class Url
 	public static function fix($url, $base_url)
 	{
 		$uobj = parse_url($url);
+		if ($uobj == false) {
+			printf("FAILED: %s\n", $url);
+			return $url;
+		}
 		if (array_key_exists('scheme', $uobj)) {
 			return $url;
 		}

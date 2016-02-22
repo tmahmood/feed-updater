@@ -49,23 +49,29 @@ class Site
 	function write_row($fp, $url)
 	{
 		$nfeeds = count($this->feeds);
-		printf("writing %s link(s)\n", $nfeeds);
+		printf("saving: %s", $this->base_url);
 		if ($nfeeds == 0) {
-			fputcsv($fp, ['', $this->base_url, $url, $this->article_url]);
+			fputcsv($fp, [$url, $this->base_url, $this->article_url, 'N/A']);
 			return;
 		}
 		foreach ($this->feeds as $feed){
-			fputcsv($fp, [$feed, $this->base_url, $url, $this->article_url]);
+			fputcsv($fp, [$url, $this->base_url, $this->article_url, $feed]);
 		}
 	}
 
 	function search_links($url)
 	{
+		$tries = 0;
 		while(true) {
+			printf("searching %s ($tries/3) ...\n", $url);
 			$saved_to = Url::download_link($url);
 			$content = file_get_contents($saved_to);
 			if ($content == '') {
 				unlink($saved_to);
+				$tries++;
+				if ($tries >= 3) {
+					return [];
+				}
 				continue;
 			}
 			break;
@@ -90,7 +96,7 @@ class Site
 				$feeds[] = $url;
 			}
 			if (count($checked) % 30 == 0) {
-				printf("#", count($checked));
+				printf("#");
 			}
 		}
 		print("\n");
@@ -103,13 +109,19 @@ class Site
 		if (strstr($url, 'javascript:') !== false) {
 			return true;
 		}
+		if (strstr($url, 'JavaScript:') !== false) {
+			return true;
+		}
 		if (strstr($url, 'mailto:') !== false) {
 			return true;
 		}
-		if (trim($url) == '' || trim($url) == '/') {
+		if (trim($url) == '' || trim($url) == '/' || trim($url) == '#') {
 			return true;
 		}
 		if (in_array($url, $checked)) {
+			return true;
+		}
+		if (strpos('#', $url) == 0) {
 			return true;
 		}
 		return false;
