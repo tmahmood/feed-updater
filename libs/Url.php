@@ -21,8 +21,6 @@ class Url
 		$this->headers = $headers;
 		$segms = explode(' ', $headers[0]);
 		if (count($segms) < 2) {
-			print_r ($segms);
-			printf("%s", $this->url);
 			return 404;
 		}
 		$this->status_code = $segms[1];
@@ -90,31 +88,40 @@ class Url
 		return str_replace(array('<br>', '<br/>', '<br />'), "\n", $response);
 	}
 
-	public static function download_link($link)
+	public static function download_link($link, $tries=0)
 	{
 		$md5 = md5($link);
 		$path = "cache/$md5";
-		if (!file_exists($path)) {
-			$content = Url::download($link);
-			file_put_contents("cache/$md5", $content);
+		if (DEBUG == true) {
+			if ($tries > 0) {
+				unlink($path);
+			}
+			if (file_exists($path)) {
+				return file_get_contents($path);;
+			}
 		}
-		return $path;
+		$content = Url::download($link);
+		if (DEBUG == true) {
+			file_put_contents($path, $content);
+		}
+		return $content;
 	}
 
 	public static function get_site_headers($url)
 	{
-		$path = 'cache/headers/' . md5($url);
-		if (file_exists($path)) {
-			$header = JSON::json_decode_file($path);
-			if ($header != false) {
-				return $header;
+		if (DEBUG == true) {
+			$path = 'cache/headers/' . md5($url);
+			if (file_exists($path)) {
+				$header = JSON::json_decode_file($path);
+				if ($header != false) {
+					return $header;
+				}
 			}
 		}
 		$header = @get_headers($url, 1);
-		if (count($header) < 2) {
-			print_r($url);
+		if (DEBUG == true) {
+			JSON::json_encode_to_file($path, $header);
 		}
-		JSON::json_encode_to_file($path, $header);
 		return $header;
 	}
 

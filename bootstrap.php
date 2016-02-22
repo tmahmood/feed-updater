@@ -1,7 +1,8 @@
 <?php
 
+define('DEBUG', true);
+
 include ('libs/dom.php');
-include ('app/links.php');
 
 function autoload_classes($class) {
 	$app_path = "app/classes/$class.php";

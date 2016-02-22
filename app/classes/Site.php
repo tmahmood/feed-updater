@@ -49,7 +49,7 @@ class Site
 	function write_row($fp, $url)
 	{
 		$nfeeds = count($this->feeds);
-		printf("saving: %s", $this->base_url);
+		printf("saving: %s\n", $this->base_url);
 		if ($nfeeds == 0) {
 			fputcsv($fp, [$url, $this->base_url, $this->article_url, 'N/A']);
 			return;
@@ -64,10 +64,8 @@ class Site
 		$tries = 0;
 		while(true) {
 			printf("searching %s ($tries/3) ...\n", $url);
-			$saved_to = Url::download_link($url);
-			$content = file_get_contents($saved_to);
+			$content = Url::download_link($url, $tries);
 			if ($content == '') {
-				unlink($saved_to);
 				$tries++;
 				if ($tries >= 3) {
 					return [];
@@ -99,7 +97,9 @@ class Site
 				printf("#");
 			}
 		}
-		print("\n");
+		if (count($checked) > 30) {
+			print("\n");
+		}
 		return $feeds;
 	}
 
