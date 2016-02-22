@@ -2,7 +2,7 @@
 
 define('DEBUG', true);
 
-include ('libs/dom.php');
+include ('libs/helpers.php');
 
 function autoload_classes($class) {
 	$app_path = "app/classes/$class.php";

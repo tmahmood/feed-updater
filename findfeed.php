@@ -16,7 +16,7 @@ foreach ($urls as $article){
 	if ($db->link_already_parsed($site->base_url)) {
 		continue;
 	}
-	print("@");
+	pl("deep search $site->base_url");
 	if($site->search_valid_feed()) {
 		$site->write_row($fp, $url);
 	}

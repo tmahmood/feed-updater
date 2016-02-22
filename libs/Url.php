@@ -135,7 +135,7 @@ class Url
 	{
 		$uobj = parse_url($url);
 		if ($uobj == false) {
-			printf("FAILED: %s\n", $url);
+			pl("FAILED: $url", $url);
 			return $url;
 		}
 		if (array_key_exists('scheme', $uobj)) {
