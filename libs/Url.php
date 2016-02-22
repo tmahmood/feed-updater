@@ -55,11 +55,7 @@ class Url
 
 	public static function get_unique_article_links($url)
 	{
-		if ($url != null) {
-			$content = Url::download($url);
-			file_put_contents('page.htm', $content);
-		}
-		$content = file_get_contents('page.htm');
+		$content = Url::download($url);
 		$xpath = get_xpath($content);
 		$links = $xpath->query('//a');
 		$outside_links = [];
