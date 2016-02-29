@@ -2,8 +2,12 @@
 
 function get_xpath($content)
 {
-	$dom = get_dom($content);
-	return new DOMXpath($dom);
+	try {
+		$dom = get_dom($content);
+		return new DOMXpath($dom);
+	} catch (Exception $e) {
+		return false;
+	}
 }
 
 function get_dom($content)

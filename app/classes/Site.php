@@ -75,6 +75,9 @@ class Site
 			break;
 		}
 		$xpath = get_xpath($content);
+		if ($xpath === false) {
+			return [];
+		}
 		$links = $xpath->query('//a');
 		$headers = [];
 		$feeds = [];
