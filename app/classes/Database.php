@@ -9,37 +9,30 @@ class Database
 	public function __construct()
 	{
 		// do database connection here
-		$this->db = 'cache/url_parsed.json';
-	}
-
-
-	function check_db()
-	{
-		if (isset($this->already_parsed)) {
-			return;
+		$json = JSON::json_decode_file('.env');
+		$this->conn = mysqli_connect($json->db->host, $json->db->user,
+										$json->db->pass, $json->db->db);
+		if (!$this->conn) {
+			die("Failed to connect database");
 		}
-		if (file_exists($this->db)) {
-			return $this->already_parsed = JSON::json_decode_file($this->db);
-		}
-		JSON::json_encode_to_file($this->db, []);
-		return $this->already_parsed = [];
 	}
 
 
 	function link_already_parsed($url)
 	{
-		$this->check_db();
-		return in_array($url, $this->already_parsed);
+		$q = "select * from already_parsed where url='$url'";
+		if($result = $this->conn->query($q)) {
+			return count($result) >= 0;
+		}
+		return false;
 	}
 
 	function store_parsed_link($url)
 	{
-		$this->check_db();
-		if (in_array($url, $this->already_parsed)) {
-			return;
-		}
-		$this->already_parsed[] = $url;
-		JSON::json_encode_to_file($this->db, $this->already_parsed);
+		$stmt = $this->conn->prepare("INSERT INTO already_parsed(link) VALUES (?)");
+		$stmt->bind_param('s', $url);
+		$stmt->execute();
+		$stmt->close();
 	}
 }
 

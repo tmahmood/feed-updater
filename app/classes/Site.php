@@ -89,6 +89,12 @@ class Site
 			}
 			$checked[] = $url;
 			$url = Url::fix($url, $this->base_url);
+			if (strpos($url, 'rss') >= 0 || strpos($url, 'feed') >= 0) {
+				if ($this->search_links($url)) {
+					$feeds[] = $url;
+					continue;
+				}
+			}
 			$url_info = new Url($url);
 			if($url_info->fetch_headers() >= 400) {
 				continue;

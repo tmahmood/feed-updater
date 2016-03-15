@@ -30,11 +30,22 @@ class SiteTest extends PHPUnit_Framework_TestCase
 	}
 
 
-	function testGetFeeds()
+	public function testGetFeeds()
 	{
 		$base_url = 'https://www.washingtonpost.com/';
 		$site = new Site($base_url);
 		$cnt = $site->search_valid_feed();
 		$this->assertEquals(67, $cnt);
 	}
+
+	public function store_link()
+	{
+		$db = new Database();
+		$db->store_parsed_link('test_link');
+		$exists = $db->link_already_parsed('test_link');
+		$this->assertTrue($exists);
+		$exists = $db->link_already_parsed('test_link_2');
+		$this->assertFalse($exists);
+	}
+
 }
