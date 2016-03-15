@@ -74,6 +74,12 @@ class Site
 			}
 			break;
 		}
+		return $this->check_all_links_in_page($content);
+	}
+
+
+	function check_all_links_in_page($content)
+	{
 		$xpath = get_xpath($content);
 		if ($xpath === false) {
 			return [];
@@ -83,28 +89,7 @@ class Site
 		$feeds = [];
 		$checked = [];
 		foreach ($links as $link){
-			$url = $link->getAttribute('href');
-			if($this->should_skip($url, $checked)) {
-				continue;
-			}
-			$checked[] = $url;
-			$url = Url::fix($url, $this->base_url);
-			if (strpos($url, 'rss') >= 0 || strpos($url, 'feed') >= 0) {
-				if ($this->search_links($url)) {
-					$feeds[] = $url;
-					continue;
-				}
-			}
-			$url_info = new Url($url);
-			if($url_info->fetch_headers() >= 400) {
-				continue;
-			}
-			if ($url_info->is_xml_content) {
-				$feeds[] = $url;
-			}
-			if (count($checked) % 30 == 0) {
-				pl("#");
-			}
+			$this->validate_link($link, $feeds, $checked);
 		}
 		if (count($checked) > 30) {
 			print("\n");
@@ -112,6 +97,25 @@ class Site
 		return $feeds;
 	}
 
+	function validate_link($link, &$feeds, &$checked)
+	{
+		$url = $link->getAttribute('href');
+		if($this->should_skip($url, $checked)) {
+			return;
+		}
+		$checked[] = $url;
+		$url = Url::fix($url, $this->base_url);
+		$url_info = new Url($url);
+		if($url_info->fetch_headers() >= 400) {
+			return;
+		}
+		if ($url_info->is_xml_content) {
+			$feeds[] = $url;
+		}
+		if (count($checked) % 30 == 0) {
+			print("#");
+		}
+	}
 
 	function should_skip($url, $checked)
 	{
@@ -130,7 +134,7 @@ class Site
 		if (in_array($url, $checked)) {
 			return true;
 		}
-		if (strpos('#', $url) == 0) {
+		if (strpos($url, '#') === 0) {
 			return true;
 		}
 		return false;

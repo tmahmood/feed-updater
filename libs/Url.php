@@ -46,6 +46,9 @@ class Url
 			}
 			$this->content_type = $headers[$ctype][1];
 		}
+		if (is_array($this->content_type)) {
+			print_r ($this->content_type);
+		}
 		$this->is_xml_content = strstr($this->content_type, 'xml') !== false;
 		return $this->status_code;
 	}

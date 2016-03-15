@@ -9,7 +9,7 @@ class Database
 	public function __construct()
 	{
 		// do database connection here
-		$json = JSON::json_decode_file('.env');
+		$json = JSON::json_decode_file('.env', true);
 		$this->conn = mysqli_connect($json->db->host, $json->db->user,
 										$json->db->pass, $json->db->db);
 		if (!$this->conn) {
@@ -17,23 +17,59 @@ class Database
 		}
 	}
 
-
 	function link_already_parsed($url)
 	{
-		$q = "select * from already_parsed where url='$url'";
-		if($result = $this->conn->query($q)) {
-			return count($result) >= 0;
+		$query = "select * from parsed_links where link='$url'";
+		if ($stmt = $this->conn->prepare($query)) {
+			$stmt->execute();
+			$stmt->store_result();
+			return $stmt->num_rows > 0;
 		}
 		return false;
 	}
 
-	function store_parsed_link($url)
+	function store_parsed_link($url, $feeds)
 	{
-		$stmt = $this->conn->prepare("INSERT INTO already_parsed(link) VALUES (?)");
-		$stmt->bind_param('s', $url);
+		$q = "INSERT INTO parsed_links(link, feeds) VALUES (?, ?)";
+		$stmt = $this->conn->prepare($q);
+		$stmt->bind_param('ss', $url, $feeds);
+		$stmt->execute();
+		$stmt->close();
+	}
+
+	function clear_links_table()
+	{
+		$this->conn->query('truncate parsed_links');
+	}
+
+	function get_feeds($link)
+	{
+		$query = "select feeds from parsed_links where link='$link'";
+		if ($result = $this->conn->query($query)) {
+			$d = $result->fetch_row();
+			return json_decode($d[0]);
+		}
+		return false;
+	}
+
+	public function link_already_exported($link, $runtime)
+	{
+		$query = "select * from exported_links where link='$link' and runtime=$runtime";
+		if ($stmt = $this->conn->prepare($query)) {
+			$stmt->execute();
+			$stmt->store_result();
+			return $stmt->num_rows > 0;
+		}
+		return false;
+	}
+
+	public function link_is_exported($link, $runtime)
+	{
+		$q = "INSERT INTO exported_links(link, runtime) VALUES (?, ?)";
+		$stmt = $this->conn->prepare($q);
+		$stmt->bind_param('ss', $link, $runtime);
 		$stmt->execute();
 		$stmt->close();
 	}
 }
-
 
