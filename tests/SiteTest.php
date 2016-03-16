@@ -52,7 +52,7 @@ class SiteTest extends PHPUnit_Framework_TestCase
 	{
 		$db = new Database();
 		$db->clear_links_table();
-		$db->store_parsed_link('test_link');
+		$db->store_parsed_link('test_link', json_encode(['link1', 'link2']));
 		$exists = $db->link_already_parsed('test_link');
 		$this->assertTrue($exists);
 		$exists = $db->link_already_parsed('test_link_2');

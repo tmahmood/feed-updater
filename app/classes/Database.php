@@ -20,12 +20,7 @@ class Database
 	function link_already_parsed($url)
 	{
 		$query = "select * from parsed_links where link='$url'";
-		if ($stmt = $this->conn->prepare($query)) {
-			$stmt->execute();
-			$stmt->store_result();
-			return $stmt->num_rows > 0;
-		}
-		return false;
+		return $this->count_query($query) > 0;
 	}
 
 	function store_parsed_link($url, $feeds)
@@ -55,12 +50,7 @@ class Database
 	public function link_already_exported($link, $runtime)
 	{
 		$query = "select * from exported_links where link='$link' and runtime=$runtime";
-		if ($stmt = $this->conn->prepare($query)) {
-			$stmt->execute();
-			$stmt->store_result();
-			return $stmt->num_rows > 0;
-		}
-		return false;
+		return $this->count_query($query) > 0;
 	}
 
 	public function link_is_exported($link, $runtime)
@@ -70,6 +60,23 @@ class Database
 		$stmt->bind_param('ss', $link, $runtime);
 		$stmt->execute();
 		$stmt->close();
+	}
+
+	function get_runtime_links_count($runtime)
+	{
+		$query = "select link from exported_links where runtime='$runtime'";
+		return $this->count_query($query);
+	}
+
+	function count_query($query)
+	{
+		if ($stmt = $this->conn->prepare($query)) {
+			$stmt->execute();
+			$stmt->store_result();
+			return $stmt->num_rows;
+		}
+		return false;
+
 	}
 }
 

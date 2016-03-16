@@ -11,6 +11,8 @@ class Site
 		$this->article_url = $url;
 		$this->base_url = Url::get_base_url($url);
 		$this->url_info = null;
+		$this->site_title = '';
+		$this->site_image = '';
 	}
 
 	function search_valid_feed()
@@ -48,15 +50,21 @@ class Site
 
 	function write_row($fp, $url)
 	{
+		$this->find_info();
 		$nfeeds = count($this->feeds);
 		pl("saving: {$this->base_url}");
 		if ($nfeeds == 0) {
-			fputcsv($fp, [$url, $this->base_url, $this->article_url, 'N/A']);
+			$this->write($fp, $url);
 			return;
 		}
 		foreach ($this->feeds as $feed){
-			fputcsv($fp, [$url, $this->base_url, $this->article_url, $feed]);
+			$this->write($fp, $url, $feed);
 		}
+	}
+
+	private function write($fp, $url, $feed='N/A')
+	{
+		fputcsv($fp, [$url, $this->base_url, $this->site_title, $this->site_image, $this->article_url, $feed]);
 	}
 
 	function search_links($url)
@@ -65,14 +73,13 @@ class Site
 		while(true) {
 			pl("searching $url ($tries) ...");
 			$content = Url::download_link($url, $tries);
-			if ($content == '') {
-				$tries++;
-				if ($tries >= 3) {
-					return [];
-				}
-				continue;
+			if ($content != '') {
+				break;
 			}
-			break;
+			$tries++;
+			if ($tries >= 3) {
+				return [];
+			}
 		}
 		return $this->check_all_links_in_page($content);
 	}
@@ -139,5 +146,28 @@ class Site
 		}
 		return false;
 	}
+
+	function find_info()
+	{
+		$content = Url::download_link($this->base_url);
+		$xpath = get_xpath($content);
+		if ($xpath === false) {
+			return;
+		}
+		$res = $xpath->query('//meta[@property="og:site_name"]');
+		if ($res->length > 0) {
+			$this->site_title = $res[0]->getAttribute('content');
+		} else {
+			$res = $xpath->query('//title');
+			if ($res->length > 0) {
+				$this->site_title = $res[0]->textContent;
+			}
+		}
+		$res = $xpath->query('//meta[@property="og:image"]');
+		if ($res->length > 0) {
+			$this->site_image = $res[0]->getAttribute('content');
+		}
+	}
+
 }
 
