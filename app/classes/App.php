@@ -48,6 +48,7 @@ class App
 			$this->url = 'LIST';
 			return $this->source;
 		} else {
+			$this->url = $this->source;
 			return Url::get_unique_article_links($this->source);
 		}
 	}

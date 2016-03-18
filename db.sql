@@ -1,9 +1,8 @@
 CREATE TABLE IF NOT EXISTS parsed_links (
 	id int(11) unsigned NOT NULL auto_increment,
-	link varchar(300) unique,
+	link varchar(300),
 	feeds text,
-	date_added datetime default now(),
-	date_updated timestamp,
+	date_added timestamp default current_timestamp,
 	PRIMARY KEY (id)
 );
 

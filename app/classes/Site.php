@@ -64,7 +64,9 @@ class Site
 
 	private function write($fp, $url, $feed='N/A')
 	{
-		fputcsv($fp, [$url, $this->base_url, $this->site_title, $this->site_image, $this->article_url, $feed]);
+		fputcsv($fp, [$url, $this->base_url, $this->site_title,
+							$this->site_image, $this->article_url,
+							$feed]);
 	}
 
 	function search_links($url)
@@ -156,18 +158,17 @@ class Site
 		}
 		$res = $xpath->query('//meta[@property="og:site_name"]');
 		if ($res->length > 0) {
-			$this->site_title = $res[0]->getAttribute('content');
+			$this->site_title = $res->item(0)->getAttribute('content');
 		} else {
 			$res = $xpath->query('//title');
 			if ($res->length > 0) {
-				$this->site_title = $res[0]->textContent;
+				$this->site_title = $res->item(0)->textContent;
 			}
 		}
 		$res = $xpath->query('//meta[@property="og:image"]');
 		if ($res->length > 0) {
-			$this->site_image = $res[0]->getAttribute('content');
+			$this->site_image = $res->item(0)->getAttribute('content');
 		}
 	}
-
 }
 
