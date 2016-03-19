@@ -9,8 +9,9 @@ $runtime = time();
 if (!file_exists('csv')) {
 	mkdir('csv');
 }
-$output = "csv/$runtime.csv";
+$output = "csv/output.csv";
 while ($line = fgetcsv($fp)) {
 	$app = new App($line[0], $output, true, $runtime);
 	$app->run();
 }
+echo "DONE\n";
