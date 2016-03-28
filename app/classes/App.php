@@ -19,7 +19,7 @@ class App
 	{
 		$this->open_file();
 		if (!$this->appending) {
-			$this->write_headers();
+			App::write_headers($this->fp);
 		}
 		$urls = $this->get_source();
 		foreach ($urls as $article){
@@ -37,9 +37,9 @@ class App
 		}
 	}
 
-	function write_headers()
+	public static function write_headers($fp)
 	{
-		fputcsv($this->fp, ['source','article','site_title','image','website url','feed url']);
+		fputcsv($fp, ['source','article','site_title','image','website url','feed url']);
 	}
 
 	function get_source()

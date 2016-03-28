@@ -8,6 +8,8 @@ $fp = fopen('sourcelist.csv', 'r');
 $runtime = time();
 if (!file_exists('csv')) {
 	mkdir('csv');
+	$fp_i = fopen('csv/output.csv', 'w');
+	App::write_headers($fp_i);
 }
 $output = "csv/output.csv";
 while ($line = fgetcsv($fp)) {
