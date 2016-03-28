@@ -168,6 +168,22 @@ class Site
 		$res = $xpath->query('//meta[@property="og:image"]');
 		if ($res->length > 0) {
 			$this->site_image = $res->item(0)->getAttribute('content');
+			return;
+		}
+		$res = $xpath->query('id("logo")//img');
+		if ($res->length >0) {
+			$this->site_image = $res->item(0)->getAttribute('src');
+			return;
+		}
+		$res = $xpath->query('//*[@class="logo"]/img');
+		if ($res->length >0) {
+			$this->site_image = $res->item(0)->getAttribute('src');
+			return;
+		}
+		$res = $xpath->query("//img[contains(@src, 'logo')]");
+		if ($res->length >0) {
+			$this->site_image = $res->item(0)->getAttribute('src');
+			return;
 		}
 	}
 }
